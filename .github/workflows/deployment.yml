@@ -79,8 +79,24 @@ jobs:
       shell: pwsh
     - name: Archive Linux/macOS application
       if: matrix.platform != 'windows'
-      run: cd desktop/build/release && zip -rq "Mindustry-${{ matrix.platform }}.zip" Mindustry
       shell: bash
+      env:
+        PLATFORM: ${{ matrix.platform }}
+      run: |
+        python3 -c "
+        import os, sys, zipfile
+        root = 'desktop/build/release/Mindustry'
+        if not os.path.isdir(root):
+            print('::error::ARCHIVE missing app image directory:', root)
+            sys.exit(1)
+        target = 'desktop/build/release/Mindustry-' + os.environ['PLATFORM'] + '.zip'
+        with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for base, _, files in os.walk(root):
+                for name in files:
+                    full = os.path.join(base, name)
+                    zf.write(full, os.path.relpath(full, 'desktop/build/release'))
+        print('wrote', target, os.path.getsize(target), 'bytes')
+        "
     - uses: actions/upload-artifact@v7
       with:
         name: platform-desktop-${{ matrix.platform }}
@@ -116,7 +132,10 @@ jobs:
         set +e
         {
           cargo install cargo-ndk --locked
-          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 -o android/libs build --release --manifest-path native/pathfinding/Cargo.toml
+          # cargo-ndk resolves the crate via `cargo metadata` in the cwd, so it must
+          # run from inside the crate directory rather than with --manifest-path.
+          cd native/pathfinding
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 -o ../../android/libs build --release
         } 2>&1 | tee /tmp/cargo-ndk.log
         status=${PIPESTATUS[0]}
         if [ $status -ne 0 ]; then
