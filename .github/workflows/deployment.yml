@@ -106,11 +106,26 @@ jobs:
       with:
         targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
     - name: Build Rust libraries for Android ABIs
+      shell: bash
       run: |
+        set -o pipefail
         export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+        export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
         echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
-        cargo install cargo-ndk --locked
-        cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 -o android/libs build --release --manifest-path native/pathfinding/Cargo.toml
+        echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
+        set +e
+        {
+          cargo install cargo-ndk --locked
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86 -t x86_64 -o android/libs build --release --manifest-path native/pathfinding/Cargo.toml
+        } 2>&1 | tee /tmp/cargo-ndk.log
+        status=${PIPESTATUS[0]}
+        if [ $status -ne 0 ]; then
+          while IFS= read -r line; do
+            line=${line//%/%25}; line=${line//$'\r'/%0D}; line=${line//$'\n'/%0A}
+            echo "::error::CARGONDK $line"
+          done < <(tail -60 /tmp/cargo-ndk.log)
+          exit $status
+        fi
     - name: Fetch Arc
       run: git clone --depth=1 --branch=master https://github.com/Anuken/Arc ../Arc
     - uses: gradle/actions/setup-gradle@v6
