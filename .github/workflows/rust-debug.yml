@@ -1,0 +1,31 @@
+name: Rust Debug
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        ref: arena/54ee23d8-mindustry
+    - uses: dtolnay/rust-toolchain@stable
+    - name: cargo test
+      id: test
+      shell: bash
+      run: |
+        set +e
+        output=$(cargo test --manifest-path native/pathfinding/Cargo.toml --no-default-features 2>&1)
+        status=$?
+        echo "exit status: $status"
+        # Surface the failure through annotations, which are readable via the API.
+        printf '%s\n' "$output" | tail -60 | while IFS= read -r line; do
+          line=${line//%/%25}
+          line=${line//$'\r'/%0D}
+          line=${line//$'\n'/%0A}
+          echo "::error::RUSTTEST $line"
+        done
+        exit $status
