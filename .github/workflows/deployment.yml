@@ -120,10 +120,10 @@ jobs:
         } 2>&1 | tee /tmp/cargo-ndk.log
         status=${PIPESTATUS[0]}
         if [ $status -ne 0 ]; then
-          while IFS= read -r line; do
-            line=${line//%/%25}; line=${line//$'\r'/%0D}; line=${line//$'\n'/%0A}
-            echo "::error::CARGONDK $line"
-          done < <(tail -60 /tmp/cargo-ndk.log)
+          detail=$(grep -iE 'error|failed|cannot|unable|not found|panic' /tmp/cargo-ndk.log | tail -25)
+          detail="$detail"$'\n'"--- last 15 lines ---"$'\n'"$(tail -15 /tmp/cargo-ndk.log)"
+          detail=${detail//%/%25}; detail=${detail//$'\r'/}; detail=${detail//$'\n'/%0A}
+          echo "::error::CARGONDK ${detail}"
           exit $status
         fi
     - name: Fetch Arc
