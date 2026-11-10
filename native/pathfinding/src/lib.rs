@@ -9,8 +9,8 @@ fn compute(costs: &[i32], width: usize, height: usize, targets: &[i32]) -> Optio
         return None;
     }
 
-    let mut weights = vec![-1; len];
-    let mut frontier = VecDeque::new();
+    let mut weights: Vec<i32> = vec![-1; len];
+    let mut frontier: VecDeque<usize> = VecDeque::new();
     for &target in targets {
         let pos = usize::try_from(target).ok()?;
         if pos < len && weights[pos] != 0 {
@@ -34,7 +34,7 @@ fn compute(costs: &[i32], width: usize, height: usize, targets: &[i32]) -> Optio
             if step < 0 {
                 return;
             }
-            let candidate = base.saturating_add(step);
+            let candidate: i32 = base.saturating_add(step);
             if weights[next] < 0 || weights[next] > candidate {
                 weights[next] = candidate;
                 frontier.push_front(next);
