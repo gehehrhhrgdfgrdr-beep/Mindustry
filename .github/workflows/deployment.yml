@@ -45,7 +45,17 @@ jobs:
     - name: Build and bundle Rust pathfinder
       shell: bash
       run: |
-        cargo test --manifest-path native/pathfinding/Cargo.toml --no-default-features
+        set +e
+        cargo test --manifest-path native/pathfinding/Cargo.toml --no-default-features 2>&1 | tee /tmp/cargo-test.log
+        test_status=${PIPESTATUS[0]}
+        if [ $test_status -ne 0 ]; then
+          while IFS= read -r line; do
+            line=${line//%/%25}; line=${line//$'\r'/%0D}; line=${line//$'\n'/%0A}
+            echo "::error::CARGOTEST $line"
+          done < <(tail -80 /tmp/cargo-test.log)
+          exit $test_status
+        fi
+        set -e
         cargo build --manifest-path native/pathfinding/Cargo.toml --release
         case "${{ matrix.platform }}" in
           windows) os=windows; file=mindustry_pathfinding.dll ;;
@@ -89,7 +99,7 @@ jobs:
       with:
         distribution: temurin
         java-version: 17
-    - uses: android-actions/setup-android@v3
+    - uses: android-actions/setup-android@v4
     - name: Install Android SDK and NDK
       run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018"
     - uses: dtolnay/rust-toolchain@stable
