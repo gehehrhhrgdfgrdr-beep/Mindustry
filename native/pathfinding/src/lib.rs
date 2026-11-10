@@ -175,8 +175,13 @@ mod tests {
 
     #[test]
     fn supports_multiple_targets_and_ignores_out_of_range_targets() {
-        let weights = compute(&[1, 5, 1, 1], 2, 2, &[0, 3, 99]).unwrap();
+        //uniform costs: both non-target tiles are one step away from a target
+        let weights = compute(&[1, 1, 1, 1], 2, 2, &[0, 3, 99]).unwrap();
         assert_eq!(weights, [0, 1, 1, 0]);
+
+        //weighted costs: tile 1 is adjacent to both targets, but entering it costs 5
+        let weights = compute(&[1, 5, 1, 1], 2, 2, &[0, 3]).unwrap();
+        assert_eq!(weights, [0, 5, 1, 0]);
     }
 
     #[test]
