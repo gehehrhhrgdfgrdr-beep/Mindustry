@@ -26,7 +26,9 @@ task incrementConfig{
     }
 
     props['app.build'] = (!props.containsKey("app.build") ? 40 : props['app.build'].toInteger() + 1) + ""
-    if(bversion != "custom build"){
+    if(project.hasProperty("distributionVersion")){
+        props['app.version'] = project.property("distributionVersion").toString()
+    }else if(bversion != "custom build"){
         props['app.version'] = versionNumber + "." + bversion + (bversion.contains(".") ? "" : ".0")
     }
     props.store(vfile.newWriter(), null)
@@ -76,5 +78,6 @@ robovm{
 
     iosSignIdentity = project.properties["signIdentity"]
     iosProvisioningProfile = project.properties["provisioningProfile"]
-    iosSkipSigning = false
+    // CI can produce an unsigned IPA when Apple signing credentials are unavailable.
+    iosSkipSigning = project.findProperty("iosSkipSigning")?.toString()?.toBoolean() ?: false
 }
